@@ -1,0 +1,109 @@
+{% extends 'base.html' %}
+
+{% block content %}
+  <div class="row">
+    <!-- Левая колонка: Каталог товаров -->
+    <div class="col-md-7">
+      <h3>Объявления</h3>
+      {% if ads %}
+        <div class="list-group">
+          {% for ad in ads %}
+            <div class="list-group-item mb-2 shadow-sm rounded">
+              <div class="d-flex w-100 justify-content-between">
+                <h5 class="mb-1">{{ ad.title }}</h5>
+                <h5 class="text-success">{{ ad.price }} ₽</h5>
+              </div>
+              <p class="mb-1 text-muted">{{ ad.description }}</p>
+              <small>
+                Продавец: <code>{{ ad.seller_id }}</code> | Статус:
+                <span class="badge {% if ad.status == 'ACTIVE' %}
+                    bg-success
+                  {% else %}
+                    bg-warning text-dark
+                  {% endif %}">
+                  {{ ad.status }}
+                </span>
+              </small>
+
+              <div class="mt-2">
+                {% if current_user %}
+                  {% if ad.status == 'ACTIVE' and ad.seller_id != current_user.id %}
+                    <form action="/web/orders/create" method="post" class="d-inline">
+                      <input type="hidden" name="ad_id" value="{{ ad.id }}" />
+                      <button class="btn btn-sm btn-primary">Купить с доставкой</button>
+                    </form>
+                  {% elif ad.seller_id == current_user.id %}
+                    <span class="badge bg-secondary">Это ваш товар</span>
+                  {% else %}
+                    <button class="btn btn-sm btn-secondary" disabled>Зарезервировано</button>
+                  {% endif %}
+                {% else %}
+                  <a href="/login-page" class="btn btn-sm btn-outline-primary">Войдите, чтобы купить</a>
+                {% endif %}
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="alert alert-info">Объявлений пока нет. Создайте первое!</div>
+      {% endif %}
+    </div>
+
+    <!-- Правая колонка: Создание объявления и Заказы -->
+    <div class="col-md-5">
+      {% if current_user %}
+        <!-- Форма создания объявления (Use Case 1) -->
+        <div class="card mb-4 shadow-sm">
+          <div class="card-header bg-white">
+            <b>Разместить объявление</b>
+          </div>
+          <div class="card-body">
+            <form action="/web/ads/create" method="post">
+              <div class="mb-2">
+                <label class="form-label">Название</label>
+                <input type="text" name="title" class="form-control form-control-sm" required placeholder="Например, Ноутбук Asus" />
+              </div>
+              <div class="mb-2">
+                <label class="form-label">Описание</label>
+                <textarea name="description" class="form-control form-control-sm" required></textarea>
+              </div>
+              <div class="mb-2">
+                <label class="form-label">Цена (₽)</label>
+                <input type="number" name="price" class="form-control form-control-sm" required />
+              </div>
+              <button type="submit" class="btn btn-success btn-sm w-100">Опубликовать</button>
+            </form>
+          </div>
+        </div>
+
+        <!-- Список заказов (Use Case 2) -->
+        <div class="card shadow-sm">
+          <div class="card-header bg-white">
+            <b>Все заказы в системе</b>
+          </div>
+          <ul class="list-group list-group-flush">
+            {% for order in orders %}
+              <li class="list-group-item">
+                <small>
+                  Заказ <code>#{{ order.id }}</code> на сумму <b>{{ order.amount }} ₽</b><br />
+                  Покупатель: <code>{{ order.buyer_id }}</code><br />
+                  Статус: <span class="badge bg-info text-dark">{{ order.status }}</span>
+                </small>
+              </li>
+            {% else %}
+              <li class="list-group-item text-muted text-center">
+                <small>Заказов еще нет</small>
+              </li>
+            {% endfor %}
+          </ul>
+        </div>
+      {% else %}
+        <div class="card text-center p-4">
+          <h5>Хотите продать или купить?</h5>
+          <p class="text-muted">Войдите под своим именем, чтобы протестировать Use Cases</p>
+          <a href="/login-page" class="btn btn-primary">Войти в систему</a>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+{% endblock %}

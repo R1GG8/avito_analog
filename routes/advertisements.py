@@ -3,7 +3,7 @@ import uuid
 from fastapi import APIRouter, HTTPException, status
 
 from enums import AdStatus
-from models import AdCreateDTO, AdResponseDTO
+from models.advertisements import AdCreateDTO, AdResponseDTO
 
 router = APIRouter(tags=["Advertisements"])
 

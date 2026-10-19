@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException, status
 
 from enums import AdStatus, OrderStatus
 from routes.advertisements import db_ads
-from models import OrderCreateDTO, OrderResponseDTO
+from models.orders import OrderCreateDTO, OrderResponseDTO
 
 router = APIRouter(tags=["Orders"])
 
