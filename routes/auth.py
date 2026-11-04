@@ -1,49 +1,55 @@
-import uuid
-from fastapi import APIRouter, Form, HTTPException, Request, Response, status
-from fastapi.responses import RedirectResponse
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from sqlalchemy.orm import Session
+from database import get_db
+from schemas import UserRegisterDTO, UserLoginDTO, UserResponseDTO
+from services import AuthService
 
-router = APIRouter(tags=["Auth"])
-
-db_users: dict[str, dict] = {}  # {user_id: {"id": ..., "username": ...}}
-
-
-def get_current_user(request: Request):
-    """Вспомогательная функция для получения текущего пользователя из Cookie"""
-    user_id = request.cookies.get("user_id")
-    if user_id and user_id in db_users:
-        return db_users[user_id]
-    return None
+router = APIRouter(prefix="/auth", tags=["Auth"])
 
 
-@router.post("/login")
-def login(response: Response, username: str = Form(...)):
-    """
-    Use Case 3: Вход или быстрая регистрация по имени.
-    Если пользователя нет — регистрируем, если есть — авторизуем.
-    """
-    username = username.strip()
-    if not username:
-        raise HTTPException(status_code=400, detail="Имя не может быть пустым")
+@router.post(
+    "/register",
+    response_model=UserResponseDTO,
+    status_code=status.HTTP_201_CREATED,
+    summary="Регистрация (JSON API)",
+)
+def api_register(
+    payload: UserRegisterDTO, response: Response, db: Session = Depends(get_db)
+):
+    try:
+        user = AuthService.register_user(
+            db=db,
+            username=payload.username,
+            email=payload.email,
+            password=payload.password,
+        )
+        response.set_cookie(key="user_id", value=user.id, httponly=True)
+        return user
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
-    # Ищем пользователя или создаем нового
-    user = next(
-        (u for u in db_users.values() if u["username"].lower() == username.lower()),
-        None,
-    )
+
+@router.post("/login", response_model=UserResponseDTO, summary="Вход (JSON API)")
+def api_login(payload: UserLoginDTO, response: Response, db: Session = Depends(get_db)):
+    try:
+        user = AuthService.authenticate_user(
+            db=db, username=payload.username, password=payload.password
+        )
+        response.set_cookie(key="user_id", value=user.id, httponly=True)
+        return user
+    except ValueError as e:
+        raise HTTPException(status_code=401, detail=str(e))
+
+
+@router.get("/me", response_model=UserResponseDTO, summary="Текущий пользователь")
+def api_get_me(request: Request, db: Session = Depends(get_db)):
+    user = AuthService.get_current_user(request, db)
     if not user:
-        user_id = f"user_{uuid.uuid4().hex[:6]}"
-        user = {"id": user_id, "username": username}
-        db_users[user_id] = user
-
-    # Устанавливаем cookie с ID пользователя
-    redirect = RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
-    redirect.set_cookie(key="user_id", value=user["id"], httponly=True)
-    return redirect
+        raise HTTPException(status_code=401, detail="Вы не авторизованы")
+    return user
 
 
-@router.get("/logout")
-def logout():
-    """Выход из аккаунта (удаление cookie)"""
-    redirect = RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
-    redirect.delete_cookie(key="user_id")
-    return redirect
+@router.post("/logout", summary="Выход (JSON API)")
+def api_logout(response: Response):
+    response.delete_cookie(key="user_id")
+    return {"message": "Успешный выход из системы"}

@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+
+{% block content %}
+  <div class="mb-3">
+    <a href="/" class="btn btn-outline-secondary btn-sm">← Вернуться к каталогу</a>
+  </div>
+
+  <div class="row">
+    <div class="col-md-7 mb-4">
+      {% if ad.image_url %}
+        <img src="{{ ad.image_url }}" class="img-fluid rounded shadow-sm w-100" style="max-height: 450px; object-fit: cover;" alt="{{ ad.title }}" />
+      {% else %}
+        <div class="bg-secondary text-white rounded d-flex align-items-center justify-content-center" style="height: 350px;">
+          <span>Изображение не прикреплено</span>
+        </div>
+      {% endif %}
+    </div>
+
+    <div class="col-md-5">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <span class="badge bg-secondary mb-2">{{ ad.category }}</span>
+          <h3>{{ ad.title }}</h3>
+          <h2 class="text-success fw-bold mb-3">{{ ad.price }} ₽</h2>
+
+          <div class="border-top border-bottom py-3 mb-3">
+            <p class="mb-1 text-muted small">Продавец:</p>
+            <div class="fw-bold">
+              Пользователь <code>{{ ad.seller_id }}</code>
+            </div>
+            <div class="text-muted small">Дата публикации: {{ ad.created_at[:10] }}</div>
+            <div class="text-muted small">
+              Статус: <b>{{ ad.status }}</b>
+            </div>
+          </div>
+
+          <h5>Описание товара:</h5>
+          <p class="text-muted" style="white-space: pre-wrap;">{{ ad.description }}</p>
+
+          <div class="mt-4">
+            {% if current_user %}
+              {% if current_user and ad.seller_id == current_user.id %}
+                <div class="d-flex flex-column gap-2">
+                  {% if ad.status != 'RESERVED' %}
+                    <a href="/ads/{{ ad.id }}/edit" class="btn btn-outline-primary w-100">✏️ Редактировать объявление</a>
+                  {% endif %}
+
+                  <form action="/web/ads/{{ ad.id }}/toggle-status" method="post">
+                    {% if ad.status == 'ACTIVE' %}
+                      <button class="btn btn-outline-warning w-100">Снять с публикации</button>
+                    {% elif ad.status == 'CLOSED' %}
+                      <button class="btn btn-outline-success w-100">Вернуть в публикацию</button>
+                    {% endif %}
+                  </form>
+
+                  {% if ad.status != 'RESERVED' %}
+                    <form action="/web/ads/{{ ad.id }}/delete" method="post" onsubmit="return confirm('Вы действительно хотите навсегда удалить это объявление?');">
+                      <button class="btn btn-outline-danger w-100">🗑️ Удалить объявление</button>
+                    </form>
+                  {% endif %}
+                </div>
+              {% elif current_user and ad.status == 'ACTIVE' %}
+                ...<form action="/web/orders/create" method="post">
+                  <input type="hidden" name="ad_id" value="{{ ad.id }}" />
+                  <button class="btn btn-primary btn-lg w-100">Купить с Авито Доставкой</button>
+                </form>
+              {% else %}
+                <button class="btn btn-secondary btn-lg w-100" disabled>Товар недоступен ({{ ad.status }})</button>
+              {% endif %}
+            {% else %}
+              <a href="/login-page" class="btn btn-outline-primary btn-lg w-100">Войти, чтобы купить</a>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}

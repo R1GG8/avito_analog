@@ -1,109 +1,168 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
 
 {% block content %}
-  <div class="row">
-    <!-- Левая колонка: Каталог товаров -->
-    <div class="col-md-7">
-      <h3>Объявления</h3>
-      {% if ads %}
-        <div class="list-group">
-          {% for ad in ads %}
-            <div class="list-group-item mb-2 shadow-sm rounded">
-              <div class="d-flex w-100 justify-content-between">
-                <h5 class="mb-1">{{ ad.title }}</h5>
-                <h5 class="text-success">{{ ad.price }} ₽</h5>
-              </div>
-              <p class="mb-1 text-muted">{{ ad.description }}</p>
-              <small>
-                Продавец: <code>{{ ad.seller_id }}</code> | Статус:
-                <span class="badge {% if ad.status == 'ACTIVE' %}
-                    bg-success
-                  {% else %}
-                    bg-warning text-dark
-                  {% endif %}">
-                  {{ ad.status }}
-                </span>
-              </small>
-
-              <div class="mt-2">
-                {% if current_user %}
-                  {% if ad.status == 'ACTIVE' and ad.seller_id != current_user.id %}
-                    <form action="/web/orders/create" method="post" class="d-inline">
-                      <input type="hidden" name="ad_id" value="{{ ad.id }}" />
-                      <button class="btn btn-sm btn-primary">Купить с доставкой</button>
-                    </form>
-                  {% elif ad.seller_id == current_user.id %}
-                    <span class="badge bg-secondary">Это ваш товар</span>
-                  {% else %}
-                    <button class="btn btn-sm btn-secondary" disabled>Зарезервировано</button>
-                  {% endif %}
-                {% else %}
-                  <a href="/login-page" class="btn btn-sm btn-outline-primary">Войдите, чтобы купить</a>
-                {% endif %}
-              </div>
+<!-- БЛОК ПОИСКА И ФИЛЬТРАЦИИ -->
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <form method="get" action="/" class="row g-2 align-items-center">
+            <div class="col-md-4">
+                <input type="text" name="q" class="form-control" placeholder="Поиск по объявлениям..." value="{{ current_q }}">
             </div>
-          {% endfor %}
-        </div>
-      {% else %}
-        <div class="alert alert-info">Объявлений пока нет. Создайте первое!</div>
-      {% endif %}
+            <div class="col-md-3">
+                <select name="category" class="form-select">
+                    {% for cat in categories %}
+                        <option value="{{ cat }}" {% if current_category == cat %}selected{% endif %}>{{ cat }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <input type="number" name="min_price" class="form-control" placeholder="Цена от" value="{{ current_min_price }}">
+            </div>
+            <div class="col-md-2">
+                <input type="number" name="max_price" class="form-control" placeholder="до" value="{{ current_max_price }}">
+            </div>
+            <div class="col-md-1 d-flex gap-1">
+                <button type="submit" class="btn btn-primary w-100">Найти</button>
+                {% if current_q or current_category != 'Все категории' or current_min_price or current_max_price %}
+                    <a href="/" class="btn btn-outline-secondary" title="Сбросить">✕</a>
+                {% endif %}
+            </div>
+        </form>
     </div>
+</div>
 
-    <!-- Правая колонка: Создание объявления и Заказы -->
-    <div class="col-md-5">
-      {% if current_user %}
-        <!-- Форма создания объявления (Use Case 1) -->
-        <div class="card mb-4 shadow-sm">
-          <div class="card-header bg-white">
-            <b>Разместить объявление</b>
-          </div>
-          <div class="card-body">
-            <form action="/web/ads/create" method="post">
-              <div class="mb-2">
-                <label class="form-label">Название</label>
-                <input type="text" name="title" class="form-control form-control-sm" required placeholder="Например, Ноутбук Asus" />
-              </div>
-              <div class="mb-2">
-                <label class="form-label">Описание</label>
-                <textarea name="description" class="form-control form-control-sm" required></textarea>
-              </div>
-              <div class="mb-2">
-                <label class="form-label">Цена (₽)</label>
-                <input type="number" name="price" class="form-control form-control-sm" required />
-              </div>
-              <button type="submit" class="btn btn-success btn-sm w-100">Опубликовать</button>
-            </form>
-          </div>
+<div class="row">
+    <!-- ЛЕВАЯ КОЛОНКА: Витрина карточек -->
+    <div class="col-md-8">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4 class="mb-0">Объявления</h4>
+            <span class="text-muted">Найдено: {{ ads|length }}</span>
         </div>
 
-        <!-- Список заказов (Use Case 2) -->
-        <div class="card shadow-sm">
-          <div class="card-header bg-white">
-            <b>Все заказы в системе</b>
-          </div>
-          <ul class="list-group list-group-flush">
-            {% for order in orders %}
-              <li class="list-group-item">
-                <small>
-                  Заказ <code>#{{ order.id }}</code> на сумму <b>{{ order.amount }} ₽</b><br />
-                  Покупатель: <code>{{ order.buyer_id }}</code><br />
-                  Статус: <span class="badge bg-info text-dark">{{ order.status }}</span>
-                </small>
-              </li>
-            {% else %}
-              <li class="list-group-item text-muted text-center">
-                <small>Заказов еще нет</small>
-              </li>
-            {% endfor %}
-          </ul>
-        </div>
-      {% else %}
-        <div class="card text-center p-4">
-          <h5>Хотите продать или купить?</h5>
-          <p class="text-muted">Войдите под своим именем, чтобы протестировать Use Cases</p>
-          <a href="/login-page" class="btn btn-primary">Войти в систему</a>
-        </div>
-      {% endif %}
+        {% if ads %}
+            <div class="row row-cols-1 row-cols-md-2 g-3">
+                {% for ad in ads %}
+                <div class="col">
+                    <div class="card h-100 shadow-sm">
+                        <!-- Фото или заглушка -->
+                        {% if ad.image_url %}
+                            <img src="{{ ad.image_url }}" class="card-img-top" style="height: 180px; object-fit: cover;" alt="{{ ad.title }}">
+                        {% else %}
+                            <div class="bg-secondary text-white d-flex align-items-center justify-content-center" style="height: 180px;">
+                                <small>Нет фото</small>
+                            </div>
+                        {% endif %}
+
+                        <div class="card-body d-flex flex-column">
+                            <span class="badge bg-light text-dark border align-self-start mb-2">{{ ad.category }}</span>
+                            <h5 class="card-title text-truncate">
+                                <a href="/ads/{{ ad.id }}" class="text-decoration-none text-dark">{{ ad.title }}</a>
+                            </h5>
+                            <h5 class="text-success fw-bold">{{ ad.price }} ₽</h5>
+                            <p class="card-text text-muted small text-truncate flex-grow-1">{{ ad.description }}</p>
+                            
+                            <div class="mt-2 pt-2 border-top">
+                                <small class="text-muted d-block mb-2">Статус: 
+                                    <span class="badge {% if ad.status == 'ACTIVE' %}bg-success{% elif ad.status == 'RESERVED' %}bg-warning text-dark{% else %}bg-secondary{% endif %}">
+                                        {{ ad.status }}
+                                    </span>
+                                </small>
+
+                                {% if current_user %}
+                                    {% if ad.seller_id == current_user.id %}
+                                        <!-- Управление для продавца -->
+                                        <form action="/web/ads/{{ ad.id }}/toggle-status" method="post" class="d-inline">
+                                            {% if ad.status == 'ACTIVE' %}
+                                                <button class="btn btn-sm btn-outline-warning w-100">Снять с продажи</button>
+                                            {% elif ad.status == 'CLOSED' %}
+                                                <button class="btn btn-sm btn-outline-success w-100">Вернуть в продажу</button>
+                                            {% endif %}
+                                        </form>
+                                    {% elif ad.status == 'ACTIVE' %}
+                                        <!-- Покупка для покупателя -->
+                                        <form action="/web/orders/create" method="post">
+                                            <input type="hidden" name="ad_id" value="{{ ad.id }}">
+                                            <button class="btn btn-sm btn-primary w-100">Купить с доставкой</button>
+                                        </form>
+                                    {% else %}
+                                        <button class="btn btn-sm btn-secondary w-100" disabled>Недоступно</button>
+                                    {% endif %}
+                                {% else %}
+                                    <a href="/login-page" class="btn btn-sm btn-outline-primary w-100">Войдите для покупки</a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="alert alert-warning">По вашему запросу ничего не найдено. Попробуйте изменить фильтры!</div>
+        {% endif %}
     </div>
-  </div>
+
+    <!-- ПРАВАЯ КОЛОНКА: Подача объявления и Заказы -->
+    <div class="col-md-4">
+        {% if current_user %}
+            <div class="card mb-4 shadow-sm">
+                <div class="card-header bg-white"><b>Разместить объявление</b></div>
+                <div class="card-body">
+                    <form action="/web/ads/create" method="post">
+                        <div class="mb-2">
+                            <label class="form-label small">Название</label>
+                            <input type="text" name="title" class="form-control form-control-sm" required placeholder="Например, Велосипед Stels">
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label small">Категория</label>
+                            <select name="category" class="form-select form-select-sm">
+                                {% for cat in categories %}
+                                    {% if cat != "Все категории" %}
+                                        <option value="{{ cat }}">{{ cat }}</option>
+                                    {% endif %}
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label small">Цена (₽)</label>
+                            <input type="number" name="price" class="form-control form-control-sm" required placeholder="10000">
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label small">Ссылка на фото (URL)</label>
+                            <input type="url" name="image_url" class="form-control form-control-sm" placeholder="https://images.unsplash.com/...">
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label small">Описание</label>
+                            <textarea name="description" class="form-control form-control-sm" rows="3" required placeholder="Состояние, характеристики..."></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-success btn-sm w-100">Опубликовать</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- История заказов -->
+            <div class="card shadow-sm">
+                <div class="card-header bg-white"><b>Сделки платформы</b></div>
+                <ul class="list-group list-group-flush">
+                    {% for order in orders %}
+                    <li class="list-group-item">
+                        <small>
+                            Заказ <code>#{{ order.id }}</code> на <b>{{ order.amount }} ₽</b><br>
+                            Покупатель: <code>{{ order.buyer_id }}</code><br>
+                            Статус: <span class="badge bg-info text-dark">{{ order.status }}</span>
+                        </small>
+                    </li>
+                    {% else %}
+                    <li class="list-group-item text-muted text-center"><small>Заказов пока нет</small></li>
+                    {% endfor %}
+                </ul>
+            </div>
+        {% else %}
+            <div class="card text-center p-4 shadow-sm">
+                <h5>Хотите продать товар?</h5>
+                <p class="text-muted small">Войдите в свой профиль, чтобы размещать объявления и совершать покупки.</p>
+                <a href="/login-page" class="btn btn-primary">Войти</a>
+            </div>
+        {% endif %}
+    </div>
+</div>
 {% endblock %}

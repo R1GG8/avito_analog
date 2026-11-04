@@ -1,0 +1,212 @@
+{% extends 'base.html' %}
+
+{% block content %}
+  <div class="row">
+    <div class="col-md-3 mb-4">
+      <div class="card shadow-sm text-center p-3">
+        <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center mx-auto mb-2" style="width: 70px; height: 70px; font-size: 28px;">{{ current_user.username.0|upper }}</div>
+        <h5 class="mb-0">{{ current_user.username }}</h5>
+        <small class="text-muted">{{ current_user.email }}</small>
+        <hr />
+        <div class="text-start small">
+          <p class="mb-1">
+            <b>ID:</b> <code>{{ current_user.id }}</code>
+          </p>
+          <p class="mb-0">
+            <b>Дата регистрации:</b> {{ current_user.created_at[:10] }}
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-9">
+      <!-- Навигационные вкладки -->
+      <ul class="nav nav-tabs mb-3" id="profileTabs" role="tablist">
+        <li class="nav-item">
+          <button class="nav-link active" id="ads-tab" data-bs-toggle="tab" data-bs-target="#ads" type="button">Мои объявления ({{ my_ads|length }})</button>
+        </li>
+        <li class="nav-item">
+          <button class="nav-link" id="purchases-tab" data-bs-toggle="tab" data-bs-target="#purchases" type="button">Мои покупки ({{ my_purchases|length }})</button>
+        </li>
+        <li class="nav-item">
+          <button class="nav-link" id="sales-tab" data-bs-toggle="tab" data-bs-target="#sales" type="button">Мои продажи ({{ my_sales|length }})</button>
+        </li>
+      </ul>
+
+      <div class="tab-content">
+        <!-- 1. Мои объявления -->
+        <div class="tab-pane fade show active" id="ads">
+          {% if my_ads %}
+            <div class="list-group">
+              {% for ad in my_ads %}
+                <div class="list-group-item d-flex justify-content-between align-items-center">
+                  <div>
+                    <h6 class="mb-1"><a href="/ads/{{ ad.id }}" class="fw-bold">{{ ad.title }}</a></h6>
+                    <span class="text-success fw-bold">{{ ad.price }} ₽</span> |
+                    <small class="text-muted">{{ ad.category }}</small>
+                  </div>
+                  <div class="d-flex align-items-center gap-2">
+                    <span class="badge {% if ad.status == 'ACTIVE' %}
+                        
+                        bg-success
+
+                      {% elif ad.status == 'RESERVED' %}
+                        
+                        bg-warning text-dark
+
+                      {% else %}
+                        
+                        bg-secondary
+
+                      {% endif %}">
+                      {{ ad.status }}
+                    </span>
+
+                    {% if ad.status != 'RESERVED' %}
+                      <!-- Редактировать -->
+                      <a href="/ads/{{ ad.id }}/edit" class="btn btn-outline-primary btn-sm" title="Редактировать">✏️</a>
+                    {% endif %}
+
+                    <!-- Снять/Вернуть -->
+                    <form action="/web/ads/{{ ad.id }}/toggle-status" method="post" class="m-0">
+                      {% if ad.status == 'ACTIVE' %}
+                        <button class="btn btn-outline-warning btn-sm" title="Снять с продажи">Снять</button>
+                      {% elif ad.status == 'CLOSED' %}
+                        <button class="btn btn-outline-success btn-sm" title="Вернуть в продажу">В продажу</button>
+                      {% endif %}
+                    </form>
+
+                    {% if ad.status != 'RESERVED' %}
+                      <!-- Удалить -->
+                      <form action="/web/ads/{{ ad.id }}/delete" method="post" class="m-0" onsubmit="return confirm('Удалить объявление?');">
+                        <button class="btn btn-outline-danger btn-sm" title="Удалить">🗑️</button>
+                      </form>
+                    {% endif %}
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <p class="text-muted">Вы еще не подавали объявлений.</p>
+          {% endif %}
+        </div>
+
+        <!-- 2. Мои покупки -->
+        <div class="tab-pane fade" id="purchases">
+          {% if my_purchases %}
+            <div class="list-group">
+              {% for order in my_purchases %}
+                <div class="list-group-item">
+                  <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                      <h6 class="mb-1">Заказ <code>#{{ order.id }}</code> на сумму <b>{{ order.amount }} ₽</b></h6>
+                      <small class="text-muted">Товар ID: <code>{{ order.ad_id }}</code> | Продавец: <code>{{ order.seller_id }}</code></small>
+                    </div>
+                    <span class="badge {% if order.status == 'COMPLETED' %}
+                        
+                        
+                        bg-success
+
+
+                      {% elif order.status == 'CANCELLED' %}
+                        
+                        
+                        bg-danger
+
+
+                      {% else %}
+                        
+                        
+                        bg-primary
+
+
+                      {% endif %}">
+                      {{ order.status }}
+                    </span>
+                  </div>
+
+                  <!-- Кнопки управления покупкой -->
+                  <div class="mt-2 pt-2 border-top d-flex gap-2">
+                    {% if order.status in ['PAID_HOLD', 'SHIPPED'] %}
+                      <form action="/web/orders/{{ order.id }}/update-status" method="post">
+                        <input type="hidden" name="new_status" value="COMPLETED" />
+                        <button class="btn btn-sm btn-success">Подтвердить получение (Завершить)</button>
+                      </form>
+                      <form action="/web/orders/{{ order.id }}/update-status" method="post">
+                        <input type="hidden" name="new_status" value="CANCELLED" />
+                        <button class="btn btn-sm btn-outline-danger">Отменить заказ</button>
+                      </form>
+                    {% else %}
+                      <small class="text-muted">Сделка закрыта</small>
+                    {% endif %}
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <p class="text-muted">Вы еще ничего не покупали.</p>
+          {% endif %}
+        </div>
+
+        <!-- 3. Мои продажи -->
+        <div class="tab-pane fade" id="sales">
+          {% if my_sales %}
+            <div class="list-group">
+              {% for order in my_sales %}
+                <div class="list-group-item">
+                  <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                      <h6 class="mb-1">Сделка <code>#{{ order.id }}</code> (Сумма: <b>{{ order.amount }} ₽</b>)</h6>
+                      <small class="text-muted">Покупатель: <code>{{ order.buyer_id }}</code> | Адрес: {{ order.delivery_address }}</small>
+                    </div>
+                    <span class="badge {% if order.status == 'COMPLETED' %}
+                        
+                        
+                        bg-success
+
+
+                      {% elif order.status == 'CANCELLED' %}
+                        
+                        
+                        bg-danger
+
+
+                      {% else %}
+                        
+                        
+                        bg-info text-dark
+
+
+                      {% endif %}">
+                      {{ order.status }}
+                    </span>
+                  </div>
+
+                  <!-- Кнопки управления отправкой -->
+                  <div class="mt-2 pt-2 border-top d-flex gap-2">
+                    {% if order.status == 'PAID_HOLD' %}
+                      <form action="/web/orders/{{ order.id }}/update-status" method="post">
+                        <input type="hidden" name="new_status" value="SHIPPED" />
+                        <button class="btn btn-sm btn-primary">Отметить как отправленный</button>
+                      </form>
+                      <form action="/web/orders/{{ order.id }}/update-status" method="post">
+                        <input type="hidden" name="new_status" value="CANCELLED" />
+                        <button class="btn btn-sm btn-outline-danger">Отклонить сделку</button>
+                      </form>
+                    {% elif order.status == 'SHIPPED' %}
+                      <small class="text-muted">Ожидается подтверждение получения покупателем...</small>
+                    {% else %}
+                      <small class="text-muted">Сделка закрыта</small>
+                    {% endif %}
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <p class="text-muted">У вас пока нет заказов от покупателей.</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}

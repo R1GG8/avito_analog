@@ -5,14 +5,30 @@
     <div class="col-md-4">
       <div class="card shadow-sm">
         <div class="card-body">
-          <h4 class="card-title text-center mb-3">Вход / Регистрация</h4>
-          <form action="/login" method="post">
-            <div class="mb-3">
-              <label class="form-label">Ваше имя или логин:</label>
-              <input type="text" name="username" class="form-control" placeholder="Например, Иван или Ольга" required />
+          <h4 class="card-title text-center mb-3">Вход в систему</h4>
+
+          {% if error %}
+            <div class="alert alert-danger py-2" role="alert">
+              <small>{{ error }}</small>
             </div>
-            <button type="submit" class="btn btn-primary w-100">Войти</button>
+          {% endif %}
+
+          <!-- ВАЖНО: action="/auth/login" (а не /login) -->
+          <form action="/auth/login" method="post">
+            <div class="mb-3">
+              <label class="form-label">Имя пользователя</label>
+              <input type="text" name="username" class="form-control" required placeholder="ivan_dev" />
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Пароль</label>
+              <input type="password" name="password" class="form-control" required placeholder="••••••••" />
+            </div>
+            <button type="submit" class="btn btn-primary w-100 mb-3">Войти</button>
           </form>
+
+          <div class="text-center">
+            <small class="text-muted">Еще нет аккаунта? <a href="/register-page">Зарегистрироваться</a></small>
+          </div>
         </div>
       </div>
     </div>
